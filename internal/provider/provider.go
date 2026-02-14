@@ -88,8 +88,9 @@ func (p *OneProviderProvider) Resources(ctx context.Context) []func() resource.R
 	return []func() resource.Resource{
 		NewServerResource,
 		NewVmResource,
-		NewProjectResource,
 		NewImageResource,
+		NewSSHKeyResource,
+		NewRdnsResource,
 	}
 }
 

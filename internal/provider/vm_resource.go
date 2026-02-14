@@ -96,6 +96,22 @@ func (r *VmResource) Schema(ctx context.Context, req resource.SchemaRequest, res
 				Computed:            true,
 				Sensitive:           true,
 			},
+			"iso_image": schema.StringAttribute{
+				MarkdownDescription: "ISO image to mount (use empty string to unmount)",
+				Optional:            true,
+			},
+			"reinstall_template": schema.StringAttribute{
+				MarkdownDescription: "Template ID to reinstall VM with",
+				Optional:            true,
+			},
+			"rescue": schema.BoolAttribute{
+				MarkdownDescription: "Enable rescue mode (true) or disable (false)",
+				Optional:            true,
+			},
+			"action": schema.StringAttribute{
+				MarkdownDescription: "VM action: boot, shutdown, reboot, poweroff",
+				Optional:            true,
+			},
 		},
 	}
 }
@@ -248,6 +264,9 @@ func (r *VmResource) Read(ctx context.Context, req resource.ReadRequest, resp *r
 		if projUUID, ok := serverInfo["project_uuid"].(string); ok {
 			state.ProjectUUID = types.StringValue(projUUID)
 		}
+		if iso, ok := serverInfo["iso"].(string); ok && iso != "" {
+			state.IsoImage = types.StringValue(iso)
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -289,6 +308,87 @@ func (r *VmResource) Update(ctx context.Context, req resource.UpdateRequest, res
 		state.InstanceSize = plan.InstanceSize
 	}
 
+	if !plan.Action.IsNull() && plan.Action.ValueString() != "" {
+		action := plan.Action.ValueString()
+		endpoint := ""
+		switch action {
+		case "boot":
+			endpoint = "/vm/boot"
+		case "shutdown":
+			endpoint = "/vm/shutdown"
+		case "reboot":
+			endpoint = "/vm/reboot"
+		case "poweroff":
+			endpoint = "/vm/poweroff"
+		default:
+			resp.Diagnostics.AddError("Invalid Action", fmt.Sprintf("Unknown action: %s", action))
+			return
+		}
+
+		_, err := callAPI(ctx, r.client, "POST", endpoint, map[string]interface{}{
+			"vm_id": vmID,
+		})
+		if err != nil {
+			resp.Diagnostics.AddError("API Error", fmt.Sprintf("Failed to %s VM: %v", action, err))
+			return
+		}
+		state.Action = types.StringValue("")
+	}
+
+	if !plan.Rescue.IsNull() {
+		endpoint := "/vm/rescue/enable"
+		if !plan.Rescue.ValueBool() {
+			endpoint = "/vm/rescue/disable"
+		}
+		_, err := callAPI(ctx, r.client, "POST", endpoint, map[string]interface{}{
+			"vm_id": vmID,
+		})
+		if err != nil {
+			resp.Diagnostics.AddError("API Error", fmt.Sprintf("Failed to set rescue mode: %v", err))
+			return
+		}
+		state.Rescue = types.BoolNull()
+	}
+
+	if !plan.IsoImage.IsNull() {
+		currentISO := state.IsoImage.ValueString()
+		newISO := plan.IsoImage.ValueString()
+
+		if newISO != currentISO {
+			if newISO == "" {
+				_, err := callAPI(ctx, r.client, "POST", "/vm/unmountiso", map[string]interface{}{
+					"vm_id": vmID,
+				})
+				if err != nil {
+					resp.Diagnostics.AddError("API Error", fmt.Sprintf("Failed to unmount ISO: %v", err))
+					return
+				}
+			} else {
+				_, err := callAPI(ctx, r.client, "POST", "/vm/mountiso", map[string]interface{}{
+					"vm_id": vmID,
+					"iso":   newISO,
+				})
+				if err != nil {
+					resp.Diagnostics.AddError("API Error", fmt.Sprintf("Failed to mount ISO: %v", err))
+					return
+				}
+			}
+			state.IsoImage = plan.IsoImage
+		}
+	}
+
+	if !plan.ReinstallTemplate.IsNull() && plan.ReinstallTemplate.ValueString() != "" {
+		_, err := callAPI(ctx, r.client, "POST", "/vm/reinstall", map[string]interface{}{
+			"vm_id":    vmID,
+			"template": plan.ReinstallTemplate.ValueString(),
+		})
+		if err != nil {
+			resp.Diagnostics.AddError("API Error", fmt.Sprintf("Failed to reinstall VM: %v", err))
+			return
+		}
+		state.ReinstallTemplate = types.StringValue("")
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -313,21 +413,25 @@ func (r *VmResource) Delete(ctx context.Context, req resource.DeleteRequest, res
 }
 
 type VmModel struct {
-	ID           types.String `tfsdk:"id"`
-	Hostname     types.String `tfsdk:"hostname"`
-	Status       types.String `tfsdk:"status"`
-	IpAddr       types.String `tfsdk:"ip_addr"`
-	ProjectUUID  types.String `tfsdk:"project_uuid"`
-	OS           types.String `tfsdk:"os"`
-	RAM          types.String `tfsdk:"ram"`
-	CPU          types.String `tfsdk:"cpu"`
-	Disk         types.String `tfsdk:"disk"`
-	LocationID   types.Int64  `tfsdk:"location_id"`
-	InstanceSize types.Int64  `tfsdk:"instance_size"`
-	Template     types.String `tfsdk:"template"`
-	SSHKeys      types.List   `tfsdk:"ssh_keys"`
-	EnableIPv6   types.Bool   `tfsdk:"enable_ipv6"`
-	RootPassword types.String `tfsdk:"root_password"`
+	ID                types.String `tfsdk:"id"`
+	Hostname          types.String `tfsdk:"hostname"`
+	Status            types.String `tfsdk:"status"`
+	IpAddr            types.String `tfsdk:"ip_addr"`
+	ProjectUUID       types.String `tfsdk:"project_uuid"`
+	OS                types.String `tfsdk:"os"`
+	RAM               types.String `tfsdk:"ram"`
+	CPU               types.String `tfsdk:"cpu"`
+	Disk              types.String `tfsdk:"disk"`
+	LocationID        types.Int64  `tfsdk:"location_id"`
+	InstanceSize      types.Int64  `tfsdk:"instance_size"`
+	Template          types.String `tfsdk:"template"`
+	SSHKeys           types.List   `tfsdk:"ssh_keys"`
+	EnableIPv6        types.Bool   `tfsdk:"enable_ipv6"`
+	RootPassword      types.String `tfsdk:"root_password"`
+	IsoImage          types.String `tfsdk:"iso_image"`
+	ReinstallTemplate types.String `tfsdk:"reinstall_template"`
+	Rescue            types.Bool   `tfsdk:"rescue"`
+	Action            types.String `tfsdk:"action"`
 }
 
 func stringToInt64(s string) int64 {
