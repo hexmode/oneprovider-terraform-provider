@@ -1,0 +1,94 @@
+* OneProvider Terraform Provider
+:PROPERTIES:
+:CUSTOM_ID: oneprovider-terraform-provider
+:END:
+This is a Terraform provider for
+[[https://oneprovider.com][OneProvider]], built on the
+[[https://github.com/hashicorp/terraform-plugin-framework][Terraform
+Plugin Framework]].
+
+** Features
+:PROPERTIES:
+:CUSTOM_ID: features
+:END:
+- *Server Management* - Read and manage dedicated servers
+- *VM (OneCloud) Management* - Create, manage, and control VMs
+- *SSH Keys* - Manage SSH keys for VM access
+- *Images* - Create and manage VM images (like AWS AMI)
+- *Reverse DNS* - Manage RDNS entries for IPs
+- *Configuration* - Query available configurations, sizes, templates,
+  and locations
+
+** Requirements
+:PROPERTIES:
+:CUSTOM_ID: requirements
+:END:
+- [[https://developer.hashicorp.com/terraform/downloads][Terraform]] >=
+  1.0
+- [[https://golang.org/doc/install][Go]] >= 1.24
+
+** Usage
+:PROPERTIES:
+:CUSTOM_ID: usage
+:END:
+#+begin_src hcl
+provider "oneprovider" {
+  api_key    = "your-api-key"
+  client_key = "your-client-key"
+}
+
+# Create a VM
+resource "oneprovider_vm" "example" {
+  hostname      = "myvm.example.com"
+  location_id   = 1
+  instance_size = 1
+  template      = "almalinux-8.6"
+}
+
+# Manage SSH keys
+resource "oneprovider_ssh_key" "deploy_key" {
+  name  = "deploy-key"
+  value = "ssh-rsa AAAA..."
+}
+
+# Set reverse DNS using the VM's IP address
+resource "oneprovider_rdns" "example" {
+  ip_address = oneprovider_vm.example.ip_addr
+  domain     = "myserver.example.com"
+}
+#+end_src
+
+** Building The Provider
+:PROPERTIES:
+:CUSTOM_ID: building-the-provider
+:END:
+#+begin_src shell
+go install
+#+end_src
+
+** Developing the Provider
+:PROPERTIES:
+:CUSTOM_ID: developing-the-provider
+:END:
+#+begin_src shell
+# Run unit tests
+make test
+
+# Run linter
+make lint
+
+# Generate documentation
+make generate
+
+# Run acceptance tests (requires API credentials)
+make testacc
+#+end_src
+
+Note: Acceptance tests create real resources and cost money to run.
+
+** Documentation
+:PROPERTIES:
+:CUSTOM_ID: documentation
+:END:
+Documentation is generated automatically from schema definitions. See
+=docs/= for generated documentation and =examples/= for usage examples.
