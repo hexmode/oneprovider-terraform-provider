@@ -6,7 +6,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -432,9 +431,4 @@ type VmModel struct {
 	ReinstallTemplate types.String `tfsdk:"reinstall_template"`
 	Rescue            types.Bool   `tfsdk:"rescue"`
 	Action            types.String `tfsdk:"action"`
-}
-
-func stringToInt64(s string) int64 {
-	i, _ := strconv.ParseInt(s, 10, 64)
-	return i
 }

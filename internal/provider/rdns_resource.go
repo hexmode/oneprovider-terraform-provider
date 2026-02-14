@@ -136,8 +136,10 @@ func (r *RdnsResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	if ttl, ok := record["ttl"].(string); ok {
 		var ttlInt int64
-		fmt.Sscanf(ttl, "%d", &ttlInt)
-		state.Ttl = types.Int64Value(ttlInt)
+		_, err := fmt.Sscanf(ttl, "%d", &ttlInt)
+		if err == nil {
+			state.Ttl = types.Int64Value(ttlInt)
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)

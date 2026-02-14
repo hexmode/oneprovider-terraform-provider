@@ -89,7 +89,7 @@ func (r *SSHKeyResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	plan.ID = types.StringValue(keyData["uuid"].(string))
+	plan.ID = types.StringValue(keyData["uuid"].(string)) // nolint: forcetypeassert
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -122,8 +122,8 @@ func (r *SSHKeyResource) Read(ctx context.Context, req resource.ReadRequest, res
 			continue
 		}
 		if keyData["uuid"] == state.ID.ValueString() {
-			state.ID = types.StringValue(keyData["uuid"].(string))
-			state.Name = types.StringValue(keyData["name"].(string))
+			state.ID = types.StringValue(keyData["uuid"].(string))   // nolint: forcetypeassert
+			state.Name = types.StringValue(keyData["name"].(string)) // nolint: forcetypeassert
 			found = true
 			break
 		}

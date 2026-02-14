@@ -150,7 +150,7 @@ func (r *ImageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 			continue
 		}
 		if imgData["id"] == imageID {
-			state.ID = types.StringValue(imgData["id"].(string))
+			state.ID = types.StringValue(imgData["id"].(string)) // nolint: forcetypeassert
 
 			if name, ok := imgData["name"].(string); ok {
 				state.Name = types.StringValue(name)

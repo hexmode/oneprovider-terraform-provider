@@ -105,13 +105,13 @@ func (d *ServerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	data.ID = types.StringValue(serverData["server_id"].(string))
-	data.IpAddr = types.StringValue(serverData["ip_addr"].(string))
-	data.Hostname = types.StringValue(serverData["hostname"].(string))
-	data.Status = types.StringValue(serverData["status"].(string))
-	data.Username = types.StringValue(serverData["username"].(string))
-	data.Location = types.StringValue(serverData["location"].(string))
-	data.BillingCycle = types.StringValue(serverData["billing_cycle"].(string))
+	data.ID = types.StringValue(serverData["server_id"].(string))               // nolint: forcetypeassert
+	data.IpAddr = types.StringValue(serverData["ip_addr"].(string))             // nolint: forcetypeassert
+	data.Hostname = types.StringValue(serverData["hostname"].(string))          // nolint: forcetypeassert
+	data.Status = types.StringValue(serverData["status"].(string))              // nolint: forcetypeassert
+	data.Username = types.StringValue(serverData["username"].(string))          // nolint: forcetypeassert
+	data.Location = types.StringValue(serverData["location"].(string))          // nolint: forcetypeassert
+	data.BillingCycle = types.StringValue(serverData["billing_cycle"].(string)) // nolint: forcetypeassert
 	data.RecurringAmount = types.StringValue(fmt.Sprintf("%v", serverData["recurring_amount"]))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
