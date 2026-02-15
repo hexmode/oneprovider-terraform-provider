@@ -2,10 +2,7 @@
 :PROPERTIES:
 :CUSTOM_ID: oneprovider-terraform-provider
 :END:
-This is a Terraform provider for
-[[https://oneprovider.com][OneProvider]], built on the
-[[https://github.com/hashicorp/terraform-plugin-framework][Terraform
-Plugin Framework]].
+This is a Terraform provider for [[https://oneprovider.com][OneProvider]], built on the [[https://github.com/hashicorp/terraform-plugin-framework][Terraform Plugin Framework]].
 
 ** Features
 :PROPERTIES:
@@ -16,16 +13,14 @@ Plugin Framework]].
 - *SSH Keys* - Manage SSH keys for VM access
 - *Images* - Create and manage VM images (like AWS AMI)
 - *Reverse DNS* - Manage RDNS entries for IPs
-- *Configuration* - Query available configurations, sizes, templates,
-  and locations
+- *Configuration* - Query available configurations, sizes, templates, and locations
 
 ** Requirements
 :PROPERTIES:
 :CUSTOM_ID: requirements
 :END:
-- [[https://developer.hashicorp.com/terraform/downloads][Terraform]] >=
-  1.0
-- [[https://golang.org/doc/install][Go]] >= 1.24
+- [[https://developer.hashicorp.com/terraform/downloads][Terraform]] >= 1.0
+- [[https://golang.org/doc/install][Go]] >= 1.25
 
 ** Usage
 :PROPERTIES:
@@ -38,11 +33,13 @@ provider "oneprovider" {
 }
 
 # Create a VM
+# Note: location_id, instance_size, and template are IDs returned by the OneProvider API.
+# Use data.oneprovider_configuration.all.* to list valid values.
 resource "oneprovider_vm" "example" {
   hostname      = "myvm.example.com"
-  location_id   = 1
-  instance_size = 1
-  template      = "almalinux-8.6"
+  location_id   = 6
+  instance_size = 108
+  template      = "909"
 }
 
 # Manage SSH keys
@@ -90,5 +87,4 @@ Note: Acceptance tests create real resources and cost money to run.
 :PROPERTIES:
 :CUSTOM_ID: documentation
 :END:
-Documentation is generated automatically from schema definitions. See
-=docs/= for generated documentation and =examples/= for usage examples.
+Documentation is generated automatically from schema definitions. See =docs/= for generated documentation and =examples/= for usage examples.

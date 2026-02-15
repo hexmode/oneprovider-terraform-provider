@@ -14,9 +14,8 @@ OneProvider server resource.
 
 ```terraform
 # Manage a dedicated server
+# Note: oneprovider_server is intended to manage an *existing* server. Import it first.
 resource "oneprovider_server" "example" {
-  id = "12345"
-
   # Update hostname
   hostname = "myserver.example.com"
 }

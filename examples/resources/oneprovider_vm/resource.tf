@@ -1,13 +1,15 @@
 # Create a VM
+# Note: location_id, instance_size, and template are IDs returned by the OneProvider API.
+# Use the oneprovider_configuration data source to list valid values.
 resource "oneprovider_vm" "example" {
   hostname      = "myvm.example.com"
-  location_id   = 1
-  instance_size = 1
-  template      = "almalinux-8.6"
+  location_id   = 6
+  instance_size = 108
+  template      = "909"
 
   # Optional settings
   enable_ipv6 = false
-  ssh_keys     = ["sshkey-uuid-123"]
+  ssh_keys    = ["sshkey-uuid-123"]
 }
 
 # VM operations (via Update)
@@ -27,8 +29,8 @@ resource "oneprovider_vm" "example" {
   # Unmount ISO (set to empty)
   # iso_image = ""
 
-  # Reinstall with different template
-  # reinstall_template = "centos-7-x86_64"
+  # Reinstall with different template (template ID)
+  # reinstall_template = "909"
 }
 
 # Import existing VM:

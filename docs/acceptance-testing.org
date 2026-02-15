@@ -64,7 +64,7 @@ source .env && make testacc
 make testacc
 
 # Run specific test
-TF_ACC=1 go test -v -run TestAccOneProviderVm ./internal/provider/
+TF_ACC=1 go test -v -run TestAccVMResource ./internal/provider/
 #+end_src
 
 **GitHub Actions**
