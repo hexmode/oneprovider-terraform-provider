@@ -9,10 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TestAccSSHKeyResource(t *testing.T) {
-	t.Skip("Acceptance test requires OneProvider API credentials")
-}
-
 func TestUnitSSHKeyModel(t *testing.T) {
 	model := SSHKeyModel{
 		ID:    types.StringValue("test-uuid"),

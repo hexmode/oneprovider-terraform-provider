@@ -1,0 +1,91 @@
+* Acceptance Testing Guide
+:PROPERTIES:
+:CUSTOM_ID: acceptance-testing
+:END:
+
+This guide explains how to run acceptance tests for the OneProvider Terraform provider.
+
+**Warning:** Acceptance tests create real resources in your OneProvider account and may incur costs.
+
+**Getting Your API Credentials**
+
+1. Log into your OneProvider account at https://oneprovider.com
+2. Navigate to the API section (usually under Account or Settings)
+3. Your API key and Client key are displayed there
+4. Copy both keys - you'll need them for testing
+
+**Environment Variables**
+
+Set these environment variables before running acceptance tests:
+
+#+begin_src shell
+export ONEPROVIDER_API_KEY="your-api-key"
+export ONEPROVIDER_CLIENT_KEY="your-client-key"
+export TF_ACC=1
+#+end_src
+
+**Using .envrc with direnv**
+
+This project uses =.envrc= for environment variables with direnv:
+
+#+begin_src shell
+# .envrc - do not commit this file
+export ONEPROVIDER_API_KEY=your-api-key
+export ONEPROVIDER_CLIENT_KEY=your-client-key
+export TF_ACC=1
+#+end_src
+
+Allow direnv to load the variables:
+
+#+begin_src shell
+direnv allow .
+#+end_src
+
+**Using a .env file**
+
+For convenience, you can create a =.env= file (add to =.gitignore=):
+
+#+begin_src shell
+# .env - do not commit this file
+ONEPROVIDER_API_KEY=your-api-key
+ONEPROVIDER_CLIENT_KEY=your-client-key
+#+end_src
+
+Then load it before running tests:
+
+#+begin_src shell
+source .env && make testacc
+#+end_src
+
+**Running Acceptance Tests**
+
+#+begin_src shell
+# Run all acceptance tests
+make testacc
+
+# Run specific test
+TF_ACC=1 go test -v -run TestAccOneProviderVm ./internal/provider/
+#+end_src
+
+**GitHub Actions**
+
+For CI/CD, add secrets to your GitHub repository:
+1. Go to Repository Settings → Secrets and variables → Actions
+2. Add =ONEPROVIDER_API_KEY= and =ONEPROVIDER_CLIENT_KEY= as secrets
+3. Update =.github/workflows/test.yml= to use them:
+
+#+begin_src yaml
+- name: Run Acceptance Tests
+  env:
+    ONEPROVIDER_API_KEY: ${{ secrets.ONEPROVIDER_API_KEY }}
+    ONEPROVIDER_CLIENT_KEY: ${{ secrets.ONEPROVIDER_CLIENT_KEY }}
+    TF_ACC: 1
+  run: go test -v ./internal/provider/
+#+end_src
+
+**Security Notes**
+
+- Never commit API keys to version control
+- Use GitHub secrets for CI/CD
+- Rotate keys periodically
+- Consider using separate credentials for testing vs production

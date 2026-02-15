@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"net/http"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -73,11 +74,26 @@ func (p *OneProviderProvider) Configure(ctx context.Context, req provider.Config
 		endpoint = data.Endpoint.ValueString()
 	}
 
+	apiKey := data.ApiKey.ValueString()
+	if apiKey == "" {
+		apiKey = os.Getenv("ONEPROVIDER_API_KEY")
+	}
+
+	clientKey := data.ClientKey.ValueString()
+	if clientKey == "" {
+		clientKey = os.Getenv("ONEPROVIDER_CLIENT_KEY")
+	}
+
+	if apiKey == "" || clientKey == "" {
+		resp.Diagnostics.AddError("Missing credentials", "API key and client key are required. Set ONEPROVIDER_API_KEY and ONEPROVIDER_CLIENT_KEY environment variables or configure in provider block.")
+		return
+	}
+
 	client := &OneProviderClient{
 		httpClient: &http.Client{},
 		Endpoint:   endpoint,
-		ApiKey:     data.ApiKey.ValueString(),
-		ClientKey:  data.ClientKey.ValueString(),
+		ApiKey:     apiKey,
+		ClientKey:  clientKey,
 	}
 
 	resp.DataSourceData = client

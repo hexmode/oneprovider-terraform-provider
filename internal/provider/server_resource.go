@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -180,22 +182,34 @@ type ServerModel struct {
 }
 
 func callAPI(ctx context.Context, client *OneProviderClient, method, endpoint string, params map[string]interface{}) (map[string]interface{}, error) {
-	url := client.Endpoint + endpoint
+	apiURL := client.Endpoint + endpoint
 
-	req, err := http.NewRequestWithContext(ctx, method, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+	var req *http.Request
+	var err error
+
+	if params != nil && (method == "POST" || method == "PUT") {
+		form := url.Values{}
+		for k, v := range params {
+			form.Add(k, fmt.Sprintf("%v", v))
+		}
+		body := strings.NewReader(form.Encode())
+		req, err = http.NewRequestWithContext(ctx, method, apiURL, body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	} else {
+		req, err = http.NewRequestWithContext(ctx, method, apiURL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
 	}
 
 	req.Header.Set("Api-Key", client.ApiKey)
 	req.Header.Set("Client-Key", client.ClientKey)
 	req.Header.Set("User-Agent", "OneProvider-Terraform/1.0")
 
-	if params != nil && (method == "POST" || method == "PUT") {
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	}
-
-	tflog.Debug(ctx, fmt.Sprintf("API Request: %s %s", method, url))
+	tflog.Debug(ctx, fmt.Sprintf("API Request: %s %s", method, apiURL))
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
