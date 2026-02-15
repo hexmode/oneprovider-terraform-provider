@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -188,16 +187,20 @@ func callAPI(ctx context.Context, client *OneProviderClient, method, endpoint st
 	var err error
 
 	if params != nil && (method == "POST" || method == "PUT") {
-		form := url.Values{}
+		// Build form data manually to match PHP http_build_query behavior
+		// (doesn't encode + as %2B)
+		var bodyParts []string
 		for k, v := range params {
-			form.Add(k, fmt.Sprintf("%v", v))
+			bodyParts = append(bodyParts, fmt.Sprintf("%s=%s", k, v))
 		}
-		body := strings.NewReader(form.Encode())
+		bodyStr := strings.Join(bodyParts, "&")
+		body := strings.NewReader(bodyStr)
 		req, err = http.NewRequestWithContext(ctx, method, apiURL, body)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		tflog.Debug(ctx, fmt.Sprintf("API POST body: %s", bodyStr))
 	} else {
 		req, err = http.NewRequestWithContext(ctx, method, apiURL, nil)
 		if err != nil {
@@ -205,11 +208,14 @@ func callAPI(ctx context.Context, client *OneProviderClient, method, endpoint st
 		}
 	}
 
+	// Set headers
+	req.Header.Set("X-Pretty-JSON", "1")
 	req.Header.Set("Api-Key", client.ApiKey)
 	req.Header.Set("Client-Key", client.ClientKey)
-	req.Header.Set("User-Agent", "OneProvider-Terraform/1.0")
+	req.Header.Set("User-Agent", "OneApi/1.0")
 
 	tflog.Debug(ctx, fmt.Sprintf("API Request: %s %s", method, apiURL))
+	tflog.Debug(ctx, fmt.Sprintf("API Headers: %v", req.Header))
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {

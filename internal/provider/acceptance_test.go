@@ -6,6 +6,7 @@ package provider
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -91,7 +92,10 @@ func TestAccVMResource(t *testing.T) {
 			{
 				Config: testAccVMResourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("oneprovider_vm.test", "id"),
+					resource.TestCheckResourceAttrWith("oneprovider_vm.test", "id", func(value string) error {
+						visualCheck("VM created with ID: " + value + " - check OneProvider panel")
+						return nil
+					}),
 					resource.TestCheckResourceAttr("oneprovider_vm.test", "hostname", "tf-test-vm"),
 					resource.TestCheckResourceAttrSet("oneprovider_vm.test", "ip_addr"),
 					resource.TestCheckResourceAttrSet("oneprovider_vm.test", "status"),
@@ -411,5 +415,17 @@ func testAccPreCheck(t *testing.T) {
 	}
 	if v := os.Getenv("ONEPROVIDER_CLIENT_KEY"); v == "" {
 		t.Fatal("ONEPROVIDER_CLIENT_KEY must be set for acceptance tests")
+	}
+}
+
+// visualCheck pauses for manual verification when VISUAL_CHECK env var is set.
+// Pass a message describing what to verify.
+func visualCheck(message string) {
+	if os.Getenv("VISUAL_CHECK") != "" {
+		fmt.Println("\n" + strings.Repeat("=", 60))
+		fmt.Println("VISUAL CHECK:", message)
+		fmt.Println("Press Enter to continue...")
+		_, _ = fmt.Scanln()
+		fmt.Println(strings.Repeat("=", 60) + "\n")
 	}
 }

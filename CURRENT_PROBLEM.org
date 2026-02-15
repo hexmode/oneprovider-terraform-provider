@@ -1,0 +1,66 @@
+* Current Problem: OneProvider API POST Requests Failing
+
+** Summary
+POST requests to OneProvider API fail with "Wrong parameters for Exception" error, while GET requests work correctly.
+
+** Evidence
+
+*** Working
+- GET /vm/sshkeys/list - Returns list of keys
+- GET /vm/locations - Returns available locations  
+- PHP file_get_contents with stream_context - Successfully creates SSH keys
+
+*** Failing
+- POST /vm/sshkey/new - Returns: {"error":{"message":"Wrong parameters for Exception([string $message [, long $code [, Throwable $previous = NULL]]])","code":0}}
+- POST /vm/create - Returns: {"error":{"code":42,"message":"Invalid plan"}}
+- PHP curl - Same error
+- Go http.Client - Same error
+- curl command line - Same error
+
+** Attempted Solutions
+
+1. *Content-Type header*
+   - Tried: application/x-www-form-urlencoded
+   - Tried: application/json
+   - Result: Both fail
+
+2. *HTTP version*
+   - Tried: HTTP/1.1 (curl -1 flag)
+   - Tried: HTTP/2 (default)
+   - Result: Both fail
+
+3. *Body encoding*
+   - Tried: url.Values.Encode() (encodes + as %2B)
+   - Tried: Manual string building (keeps + as +)
+   - Result: Both fail
+
+4. *Header combinations*
+   - Tried: Various header orders
+   - Tried: With/without Accept header
+   - Tried: With/without X-Pretty-JSON header
+   - Tried: With/without User-Agent header
+   - Result: All fail
+
+5. *Request library*
+   - Tried: Go net/http
+   - Tried: PHP curl
+   - Tried: curl command line
+   - Result: All fail except PHP file_get_contents
+
+** Key Observation
+
+PHP's file_get_contents with stream_context_create works, but PHP's curl extension fails. This suggests the API may have specific requirements about how the HTTP request is constructed that differ between PHP's native HTTP client and standard HTTP libraries.
+
+** Next Steps
+
+1. Compare raw HTTP request bytes between PHP file_get_contents and curl
+2. Check if there are undocumented headers or request format requirements
+3. Contact OneProvider support for API documentation clarification
+4. Consider using a proxy to capture and compare request differences
+
+** Test Environment
+
+- API Endpoint: https://api.oneprovider.com
+- Credentials: Loaded from .envrc (ONEPROVIDER_API_KEY, ONEPROVIDER_CLIENT_KEY)
+- Go version: 1.24
+- PHP version: 8.x
