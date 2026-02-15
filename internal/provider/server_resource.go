@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -187,13 +188,13 @@ func callAPI(ctx context.Context, client *OneProviderClient, method, endpoint st
 	var err error
 
 	if params != nil && (method == "POST" || method == "PUT") {
-		// Build form data manually to match PHP http_build_query behavior
-		// (doesn't encode + as %2B)
-		var bodyParts []string
+		// Use url.Values to properly encode the form data
+		// This ensures special characters like +, =, and spaces are properly encoded
+		formData := url.Values{}
 		for k, v := range params {
-			bodyParts = append(bodyParts, fmt.Sprintf("%s=%s", k, v))
+			formData.Set(k, fmt.Sprintf("%v", v))
 		}
-		bodyStr := strings.Join(bodyParts, "&")
+		bodyStr := formData.Encode()
 		body := strings.NewReader(bodyStr)
 		req, err = http.NewRequestWithContext(ctx, method, apiURL, body)
 		if err != nil {
@@ -215,7 +216,15 @@ func callAPI(ctx context.Context, client *OneProviderClient, method, endpoint st
 	req.Header.Set("User-Agent", "OneApi/1.0")
 
 	tflog.Debug(ctx, fmt.Sprintf("API Request: %s %s", method, apiURL))
-	tflog.Debug(ctx, fmt.Sprintf("API Headers: %v", req.Header))
+	// Log headers but redact credentials
+	redacted := req.Header.Clone()
+	if redacted.Get("Api-Key") != "" {
+		redacted.Set("Api-Key", "REDACTED")
+	}
+	if redacted.Get("Client-Key") != "" {
+		redacted.Set("Client-Key", "REDACTED")
+	}
+	tflog.Debug(ctx, fmt.Sprintf("API Headers: %v", redacted))
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {

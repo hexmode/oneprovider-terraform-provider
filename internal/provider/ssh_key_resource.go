@@ -77,15 +77,10 @@ func (r *SSHKeyResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	keys, ok := result["response"].(map[string]interface{})["keys"].([]interface{})
-	if !ok || len(keys) == 0 {
-		resp.Diagnostics.AddError("API Error", "Failed to get created SSH key UUID")
-		return
-	}
-
-	keyData, ok := keys[0].(map[string]interface{})
+	// API returns "key" (singular), not "keys" (plural)
+	keyData, ok := result["response"].(map[string]interface{})["key"].(map[string]interface{})
 	if !ok {
-		resp.Diagnostics.AddError("API Error", "Invalid SSH key response format")
+		resp.Diagnostics.AddError("API Error", "Failed to get created SSH key UUID")
 		return
 	}
 

@@ -129,6 +129,9 @@ func (d *ConfigurationDataSource) Read(ctx context.Context, req datasource.ReadR
 	data.Templates = types.ListValueMust(types.StringType, stringSliceToTypeList(templates))
 	data.Locations = types.ListValueMust(types.StringType, stringSliceToTypeList(locations))
 
+	// Set a fixed ID since this is a singleton data source
+	data.ID = types.StringValue("oneprovider_configuration")
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
