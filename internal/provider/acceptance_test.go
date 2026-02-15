@@ -91,18 +91,21 @@ resource "oneprovider_ssh_key" "test" {
 
 // TestAccVMResource tests VM creation and basic operations.
 func TestAccVMResource(t *testing.T) {
+	// Use unique hostname to identify test VMs
+	vmHostname := "tf-test-vm-" + strconv.FormatInt(time.Now().Unix(), 10)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccVMResourceConfig(),
+				Config: testAccVMResourceConfig(vmHostname),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrWith("oneprovider_vm.test", "id", func(value string) error {
 						visualCheck("VM created with ID: " + value + " - check OneProvider panel")
 						return nil
 					}),
-					resource.TestCheckResourceAttr("oneprovider_vm.test", "hostname", "tf-test-vm"),
+					resource.TestCheckResourceAttr("oneprovider_vm.test", "hostname", vmHostname),
 					resource.TestCheckResourceAttrSet("oneprovider_vm.test", "ip_addr"),
 					resource.TestCheckResourceAttrSet("oneprovider_vm.test", "status"),
 				),
@@ -115,16 +118,16 @@ func TestAccVMResource(t *testing.T) {
 			},
 			// Test hostname update
 			{
-				Config: testAccVMResourceConfigUpdatedHostname(),
+				Config: testAccVMResourceConfigUpdatedHostname(vmHostname),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("oneprovider_vm.test", "hostname", "tf-test-vm-updated"),
+					resource.TestCheckResourceAttr("oneprovider_vm.test", "hostname", vmHostname+"-updated"),
 				),
 			},
 		},
 	})
 }
 
-func testAccVMResourceConfig() string {
+func testAccVMResourceConfig(hostname string) string {
 	return fmt.Sprintf(`
 provider "oneprovider" {
   api_key    = "%s"
@@ -132,15 +135,15 @@ provider "oneprovider" {
 }
 
 resource "oneprovider_vm" "test" {
-  hostname      = "tf-test-vm"
+  hostname      = "%s"
   location_id   = 6
   instance_size = 108
   template      = "909"
 }
-`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"))
+`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), hostname)
 }
 
-func testAccVMResourceConfigUpdatedHostname() string {
+func testAccVMResourceConfigUpdatedHostname(hostname string) string {
 	return fmt.Sprintf(`
 provider "oneprovider" {
   api_key    = "%s"
@@ -148,22 +151,25 @@ provider "oneprovider" {
 }
 
 resource "oneprovider_vm" "test" {
-  hostname      = "tf-test-vm-updated"
+  hostname      = "%s-updated"
   location_id   = 6
   instance_size = 108
   template      = "909"
 }
-`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"))
+`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), hostname)
 }
 
 // TestAccVMResourceWithSSHKey tests VM creation with SSH key.
 func TestAccVMResourceWithSSHKey(t *testing.T) {
+	// Use unique hostname to identify test VMs
+	vmHostname := "tf-test-vm-key-" + strconv.FormatInt(time.Now().Unix(), 10)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccVMResourceWithSSHKeyConfig(),
+				Config: testAccVMResourceWithSSHKeyConfig(vmHostname),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("oneprovider_vm.test", "id"),
 					resource.TestCheckResourceAttrSet("oneprovider_vm.test", "ip_addr"),
@@ -173,7 +179,7 @@ func TestAccVMResourceWithSSHKey(t *testing.T) {
 	})
 }
 
-func testAccVMResourceWithSSHKeyConfig() string {
+func testAccVMResourceWithSSHKeyConfig(hostname string) string {
 	// Try to read a real SSH key for testing
 	sshKey := os.Getenv("ONEPROVIDER_TEST_SSH_KEY")
 	if sshKey == "" {
@@ -206,31 +212,34 @@ resource "oneprovider_ssh_key" "test" {
 }
 
 resource "oneprovider_vm" "test" {
-  hostname      = "tf-test-vm-with-key"
+  hostname      = "%s"
   location_id   = 6
   instance_size = 108
   template      = "909"
   ssh_keys      = [oneprovider_ssh_key.test.id]
 }
-`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), keyName, sshKey)
+`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), keyName, sshKey, hostname)
 }
 
 // TestAccRdnsResource tests reverse DNS operations.
 func TestAccRdnsResource(t *testing.T) {
+	// Use unique hostname to identify test VMs
+	vmHostname := "tf-test-vm-rdns-" + strconv.FormatInt(time.Now().Unix(), 10)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				// First create a VM to get an IP address
-				Config: testAccVMResourceForRdnsConfig(),
+				Config: testAccVMResourceForRdnsConfig(vmHostname),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("oneprovider_vm.rdns_test", "ip_addr"),
 				),
 			},
 			{
 				// Then set RDNS using the VM's IP
-				Config: testAccRdnsResourceConfig(),
+				Config: testAccRdnsResourceConfig(vmHostname),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("oneprovider_rdns.test", "domain"),
 				),
@@ -243,7 +252,7 @@ func TestAccRdnsResource(t *testing.T) {
 			},
 			{
 				// Update RDNS
-				Config: testAccRdnsResourceConfigUpdated(),
+				Config: testAccRdnsResourceConfigUpdated(vmHostname),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("oneprovider_rdns.test", "domain", "updated.example.com"),
 				),
@@ -252,7 +261,7 @@ func TestAccRdnsResource(t *testing.T) {
 	})
 }
 
-func testAccVMResourceForRdnsConfig() string {
+func testAccVMResourceForRdnsConfig(hostname string) string {
 	return fmt.Sprintf(`
 provider "oneprovider" {
   api_key    = "%s"
@@ -260,15 +269,15 @@ provider "oneprovider" {
 }
 
 resource "oneprovider_vm" "rdns_test" {
-  hostname      = "tf-test-vm-rdns"
+  hostname      = "%s"
   location_id   = 6
   instance_size = 108
   template      = "909"
 }
-`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"))
+`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), hostname)
 }
 
-func testAccRdnsResourceConfig() string {
+func testAccRdnsResourceConfig(hostname string) string {
 	return fmt.Sprintf(`
 provider "oneprovider" {
   api_key    = "%s"
@@ -276,7 +285,7 @@ provider "oneprovider" {
 }
 
 resource "oneprovider_vm" "rdns_test" {
-  hostname      = "tf-test-vm-rdns"
+  hostname      = "%s"
   location_id   = 6
   instance_size = 108
   template      = "909"
@@ -286,10 +295,10 @@ resource "oneprovider_rdns" "test" {
   ip_address = oneprovider_vm.rdns_test.ip_addr
   domain     = "original.example.com"
 }
-`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"))
+`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), hostname)
 }
 
-func testAccRdnsResourceConfigUpdated() string {
+func testAccRdnsResourceConfigUpdated(hostname string) string {
 	return fmt.Sprintf(`
 provider "oneprovider" {
   api_key    = "%s"
@@ -297,7 +306,7 @@ provider "oneprovider" {
 }
 
 resource "oneprovider_vm" "rdns_test" {
-  hostname      = "tf-test-vm-rdns"
+  hostname      = "%s"
   location_id   = 6
   instance_size = 108
   template      = "909"
@@ -307,25 +316,28 @@ resource "oneprovider_rdns" "test" {
   ip_address = oneprovider_vm.rdns_test.ip_addr
   domain     = "updated.example.com"
 }
-`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"))
+`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), hostname)
 }
 
 // TestAccImageResource tests image creation from VM.
 func TestAccImageResource(t *testing.T) {
+	// Use unique hostname to identify test VMs
+	vmHostname := "tf-test-vm-image-" + strconv.FormatInt(time.Now().Unix(), 10)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				// First create a VM to create image from
-				Config: testAccVMResourceForImageConfig(),
+				Config: testAccVMResourceForImageConfig(vmHostname),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("oneprovider_vm.image_test", "id"),
 				),
 			},
 			{
 				// Create image from VM
-				Config: testAccImageResourceConfig(),
+				Config: testAccImageResourceConfig(vmHostname),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("oneprovider_image.test", "id"),
 					resource.TestCheckResourceAttr("oneprovider_image.test", "name", "tf-test-image"),
@@ -335,7 +347,7 @@ func TestAccImageResource(t *testing.T) {
 	})
 }
 
-func testAccVMResourceForImageConfig() string {
+func testAccVMResourceForImageConfig(hostname string) string {
 	return fmt.Sprintf(`
 provider "oneprovider" {
   api_key    = "%s"
@@ -343,15 +355,15 @@ provider "oneprovider" {
 }
 
 resource "oneprovider_vm" "image_test" {
-  hostname      = "tf-test-vm-image"
+  hostname      = "%s"
   location_id   = 6
   instance_size = 108
   template      = "909"
 }
-`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"))
+`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), hostname)
 }
 
-func testAccImageResourceConfig() string {
+func testAccImageResourceConfig(hostname string) string {
 	return fmt.Sprintf(`
 provider "oneprovider" {
   api_key    = "%s"
@@ -359,7 +371,7 @@ provider "oneprovider" {
 }
 
 resource "oneprovider_vm" "image_test" {
-  hostname      = "tf-test-vm-image"
+  hostname      = "%s"
   location_id   = 6
   instance_size = 108
   template      = "909"
@@ -369,25 +381,28 @@ resource "oneprovider_image" "test" {
   name  = "tf-test-image"
   vm_id = oneprovider_vm.image_test.id
 }
-`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"))
+`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), hostname)
 }
 
 // TestAccServerDataSource tests reading server information.
 func TestAccServerDataSource(t *testing.T) {
+	// Use unique hostname to identify test VMs
+	vmHostname := "tf-test-vm-ds-" + strconv.FormatInt(time.Now().Unix(), 10)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				// First create a VM to get an ID
-				Config: testAccVMResourceForServerDataSourceConfig(),
+				Config: testAccVMResourceForServerDataSourceConfig(vmHostname),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("oneprovider_vm.server_test", "id"),
 				),
 			},
 			{
 				// Then read it via data source
-				Config: testAccServerDataSourceConfig(),
+				Config: testAccServerDataSourceConfig(vmHostname),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.oneprovider_server.test", "id"),
 					resource.TestCheckResourceAttrSet("data.oneprovider_server.test", "ip_addr"),
@@ -398,7 +413,7 @@ func TestAccServerDataSource(t *testing.T) {
 	})
 }
 
-func testAccVMResourceForServerDataSourceConfig() string {
+func testAccVMResourceForServerDataSourceConfig(hostname string) string {
 	return fmt.Sprintf(`
 provider "oneprovider" {
   api_key    = "%s"
@@ -406,15 +421,15 @@ provider "oneprovider" {
 }
 
 resource "oneprovider_vm" "server_test" {
-  hostname      = "tf-test-vm-ds"
+  hostname      = "%s"
   location_id   = 6
   instance_size = 108
   template      = "909"
 }
-`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"))
+`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), hostname)
 }
 
-func testAccServerDataSourceConfig() string {
+func testAccServerDataSourceConfig(hostname string) string {
 	return fmt.Sprintf(`
 provider "oneprovider" {
   api_key    = "%s"
@@ -422,7 +437,7 @@ provider "oneprovider" {
 }
 
 resource "oneprovider_vm" "server_test" {
-  hostname      = "tf-test-vm-ds"
+  hostname      = "%s"
   location_id   = 6
   instance_size = 108
   template      = "909"
@@ -431,7 +446,7 @@ resource "oneprovider_vm" "server_test" {
 data "oneprovider_server" "test" {
   id = oneprovider_vm.server_test.id
 }
-`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"))
+`, os.Getenv("ONEPROVIDER_API_KEY"), os.Getenv("ONEPROVIDER_CLIENT_KEY"), hostname)
 }
 
 // testAccPreCheck checks if acceptance tests can run.
