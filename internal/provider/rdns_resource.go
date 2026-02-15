@@ -124,7 +124,13 @@ func (r *RdnsResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	record, ok := result["response"].(map[string]interface{})["record"].(map[string]interface{})
+	responseData, ok := result["response"].(map[string]interface{})
+	if !ok {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	record, ok := responseData["record"].(map[string]interface{})
 	if !ok || record == nil {
 		resp.State.RemoveResource(ctx)
 		return

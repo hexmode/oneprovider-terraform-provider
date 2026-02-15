@@ -202,7 +202,49 @@ func (r *VmResource) Create(ctx context.Context, req resource.CreateRequest, res
 		plan.RootPassword = types.StringValue(fmt.Sprintf("%v", pw))
 	}
 
-	plan.Status = types.StringValue("creating")
+	// Fetch VM info to populate all computed fields
+	vmInfoResult, err := callAPI(ctx, r.client, "GET", fmt.Sprintf("/vm/info/%s", vmID), nil)
+	if err != nil {
+		tflog.Warn(ctx, fmt.Sprintf("Failed to get VM info after creation: %v", err))
+		// Don't fail, just use what we have
+		plan.Status = types.StringValue("creating")
+	} else {
+		vmData, ok := vmInfoResult["response"].(map[string]interface{})
+		if !ok {
+			tflog.Warn(ctx, "Invalid response format from VM info")
+			plan.Status = types.StringValue("creating")
+		} else {
+			// Populate all computed fields from the VM info response
+			if hostname, ok := vmData["hostname"].(string); ok {
+				plan.Hostname = types.StringValue(hostname)
+			}
+
+			if status, ok := vmData["status"].(string); ok {
+				plan.Status = types.StringValue(status)
+			}
+
+			if serverInfo, ok := vmData["server_info"].(map[string]interface{}); ok {
+				if ip, ok := serverInfo["ipaddress"].(string); ok {
+					plan.IpAddr = types.StringValue(ip)
+				}
+				if template, ok := serverInfo["template"].(string); ok {
+					plan.OS = types.StringValue(template)
+				}
+				if ram, ok := serverInfo["ram_mb"].(string); ok {
+					plan.RAM = types.StringValue(ram)
+				}
+				if cpus, ok := serverInfo["cpus"].(string); ok {
+					plan.CPU = types.StringValue(cpus)
+				}
+				if space, ok := serverInfo["space_gb"].(string); ok {
+					plan.Disk = types.StringValue(space)
+				}
+				if projUUID, ok := serverInfo["project_uuid"].(string); ok {
+					plan.ProjectUUID = types.StringValue(projUUID)
+				}
+			}
+		}
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }

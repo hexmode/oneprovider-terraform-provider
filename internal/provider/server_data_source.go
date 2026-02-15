@@ -105,14 +105,38 @@ func (d *ServerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	data.ID = types.StringValue(serverData["server_id"].(string))               // nolint: forcetypeassert
-	data.IpAddr = types.StringValue(serverData["ip_addr"].(string))             // nolint: forcetypeassert
-	data.Hostname = types.StringValue(serverData["hostname"].(string))          // nolint: forcetypeassert
-	data.Status = types.StringValue(serverData["status"].(string))              // nolint: forcetypeassert
-	data.Username = types.StringValue(serverData["username"].(string))          // nolint: forcetypeassert
-	data.Location = types.StringValue(serverData["location"].(string))          // nolint: forcetypeassert
-	data.BillingCycle = types.StringValue(serverData["billing_cycle"].(string)) // nolint: forcetypeassert
-	data.RecurringAmount = types.StringValue(fmt.Sprintf("%v", serverData["recurring_amount"]))
+	// Use safe type assertions with existence checks
+	if v, ok := serverData["server_id"].(string); ok {
+		data.ID = types.StringValue(v)
+	}
+
+	if v, ok := serverData["ip_addr"].(string); ok {
+		data.IpAddr = types.StringValue(v)
+	}
+
+	if v, ok := serverData["hostname"].(string); ok {
+		data.Hostname = types.StringValue(v)
+	}
+
+	if v, ok := serverData["status"].(string); ok {
+		data.Status = types.StringValue(v)
+	}
+
+	if v, ok := serverData["username"].(string); ok {
+		data.Username = types.StringValue(v)
+	}
+
+	if v, ok := serverData["location"].(string); ok {
+		data.Location = types.StringValue(v)
+	}
+
+	if v, ok := serverData["billing_cycle"].(string); ok {
+		data.BillingCycle = types.StringValue(v)
+	}
+
+	if v, ok := serverData["recurring_amount"]; ok {
+		data.RecurringAmount = types.StringValue(fmt.Sprintf("%v", v))
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
