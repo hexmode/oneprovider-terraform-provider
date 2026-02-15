@@ -2,8 +2,8 @@
 schema_version = 1
 
 project {
-  license        = "MPL-2.0"
-  copyright_year = 2021
+  license        = "GPL-3.0-or-later"
+  copyright_year = 2026
 
   header_ignore = [
     # internal catalog metadata (prose)
